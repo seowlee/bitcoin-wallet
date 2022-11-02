@@ -10,5 +10,5 @@ sendBitcoin("msooPWX1dYAhqUkbkziR3gGdSgDaKtE2Mk", 0.0001)
     console.log(error);
   });
 
-// console.log(createWallet(mainnet));
+// console.log(createWallet(testnet));
 // console.log(createHDWallet(testnet));
