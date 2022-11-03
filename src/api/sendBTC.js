@@ -26,7 +26,58 @@ const sendBitcoin = async (recieverAddress, amountToSend) => {
     let inputs = [];
     let utxos = response.data.data.txs;
 
-    console.log("sendBitcoin");
+    for (const element of utxos) {
+      let utxo = {};
+      utxo.satoshis = Math.floor(Number(element.value) * 100000000);
+      utxo.script = element.script_hex;
+      utxo.address = response.data.data.address;
+      utxo.txId = element.txid;
+      utxo.outputIndex = element.output_no;
+      totalAmountAvailable += utxo.satoshis;
+      inputCount += 1;
+      inputs.push(utxo);
+    }
+
+    const transactionSize =
+      inputCount * 180 + outputCount * 34 + 10 - inputCount;
+
+    fee = (transactionSize * recommededFee.data.hourFee) / 3;
+
+    // Balance check
+    if (totalAmountAvailable - satoshiToSend - fee < 0) {
+      throw new Error("Balance is too low for this transaction");
+    }
+
+    // Set transaction input
+    transaction.from(inputs);
+
+    // Set recieverAddress and amountToSend
+    transaction.to(recieverAddress, satoshiToSend);
+
+    // Update sender Address (receive the left over funds after transfer)
+    transaction.change(sourceAddress);
+    console.log(satoshiToSend, fee);
+
+    // manually set transaction fees - 20 satoshis per byte
+    transaction.fee(Math.round(fee));
+
+    // Sign transaction with sender privateKey
+    transaction.sign(privateKey);
+
+    // serialize transactions
+    console.log(transaction.serialize());
+    const serializedTransaction = transaction.serialize();
+
+    // Send transaction
+    const result = await axios({
+      method: "POST",
+      url: `https://chain.so/api/v2/send_tx/${sochain_network}`,
+      data: {
+        tx_hex: serializedTransaction,
+      },
+    });
+
+    return result.data.data;
   } catch (error) {
     return error;
   }
